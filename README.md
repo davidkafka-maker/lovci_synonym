@@ -1,0 +1,1 @@
+# lovci_synonym
