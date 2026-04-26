@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lovci synonym</title>
+<style>
+:root {
+  --bg:#0f172a; --panel:#111827; --card:#1f2937; --text:#f8fafc; --muted:#cbd5e1;
+  --accent:#f59e0b; --ok:#22c55e; --bad:#ef4444; --blue:#38bdf8;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0; min-height:100vh; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  color:var(--text); background:
+  radial-gradient(circle at 20% 10%, rgba(245,158,11,.22), transparent 30%),
+  radial-gradient(circle at 90% 20%, rgba(56,189,248,.14), transparent 32%),
+  linear-gradient(135deg, #020617, #111827 55%, #0f172a);
+}
+.screen { display:none; min-height:100vh; padding:20px; align-items:center; justify-content:center; }
+.screen.active { display:flex; }
+.wrap { width:min(760px, 100%); }
+.card {
+  background:rgba(17,24,39,.88); border:1px solid rgba(255,255,255,.12);
+  border-radius:24px; padding:22px; box-shadow:0 18px 60px rgba(0,0,0,.35);
+}
+h1 { margin:0 0 10px; text-align:center; font-size:clamp(32px, 8vw, 58px); letter-spacing:.5px; }
+.subtitle { text-align:center; color:var(--muted); margin-bottom:18px; font-size:18px; }
+label { display:block; color:var(--muted); margin:14px 0 6px; font-weight:700; }
+input {
+  width:100%; padding:14px 16px; border-radius:16px; border:1px solid rgba(255,255,255,.15);
+  background:#020617; color:var(--text); font-size:20px; outline:none;
+}
+.row { display:flex; gap:12px; flex-wrap:wrap; }
+button {
+  appearance:none; border:0; border-radius:18px; padding:15px 16px; cursor:pointer;
+  font-weight:900; letter-spacing:.4px; font-size:18px; color:#0f172a; background:var(--accent);
+  box-shadow:0 8px 0 rgba(0,0,0,.22); transition:.08s transform, .08s box-shadow, .15s filter;
+}
+button:active { transform:translateY(4px); box-shadow:0 4px 0 rgba(0,0,0,.22); }
+button.secondary { background:#e5e7eb; }
+button.blue { background:var(--blue); }
+button.green { background:var(--ok); }
+button.red { background:var(--bad); color:white; }
+.full { width:100%; margin-top:12px; }
+.menuGrid { display:grid; grid-template-columns:1fr; gap:14px; margin-top:18px; }
+.topbar { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+.pill { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.1); padding:9px 12px; border-radius:999px; font-weight:800; }
+.timer { color:#fff; background:rgba(245,158,11,.18); border-color:rgba(245,158,11,.35); }
+.prompt { color:var(--muted); font-size:18px; text-align:center; margin:8px 0; }
+.sentence {
+  font-size:clamp(24px, 6vw, 36px); line-height:1.25; text-align:center; margin:18px 0 18px;
+  padding:18px; background:rgba(2,6,23,.55); border-radius:22px;
+}
+.sentence strong { color:#fde68a; text-decoration:underline; text-underline-offset:6px; }
+.options { display:grid; grid-template-columns:1fr; gap:12px; }
+.opt {
+  background:#f8fafc; color:#111827; text-align:left; font-size:clamp(19px, 4.8vw, 26px);
+  padding:17px 18px; border-radius:20px; box-shadow:none; border:2px solid transparent;
+}
+.opt.correct { background:rgba(34,197,94,.95); color:#06240f; }
+.opt.wrong { background:rgba(239,68,68,.95); color:white; }
+.feedback { min-height:88px; text-align:center; padding-top:14px; font-weight:1000; font-size:clamp(30px, 7vw, 52px); }
+.feedback small { display:block; margin-top:8px; color:var(--muted); font-size:18px; font-weight:700; }
+.table { width:100%; border-collapse:collapse; margin-top:12px; overflow:hidden; border-radius:16px; }
+td,th { padding:10px; border-bottom:1px solid rgba(255,255,255,.1); text-align:left; }
+th { color:#fde68a; }
+.hidden { display:none !important; }
+.note { color:var(--muted); font-size:15px; text-align:center; }
+@media (min-width:700px) {
+ .menuGrid { grid-template-columns:1fr 1fr; }
+ .options { grid-template-columns:1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<section id="login" class="screen active"><div class="wrap"><div class="card">
+  <h1>Lovci synonym</h1>
+  <div class="subtitle">Cizí slovo v kontextu. Najdi nejvhodnější české synonymum.</div>
+  <label for="name">Jméno</label><input id="name" autocomplete="name" placeholder="např. Jana Nováková">
+  <label for="cls">Třída</label><input id="cls" placeholder="např. 4A">
+  <button class="full" onclick="savePlayer()">ZAČÍT HRÁT</button>
+  <p class="note">Údaje se uloží jen v tomto zařízení.</p>
+</div></div></section>
+
+<section id="menu" class="screen"><div class="wrap"><div class="card">
+  <h1>Lovci synonym</h1>
+  <div id="who" class="subtitle"></div>
+  <div class="menuGrid">
+    <button class="green" onclick="startGame('train')">TRÉNINK</button>
+    <button onclick="startGame('test')">NAOSTRO</button>
+    <button class="blue" onclick="showStats()">STATISTIKA</button>
+    <button class="secondary" onclick="changePlayer()">ZMĚNIT ÚDAJE</button>
+  </div>
+  <p class="note">TRÉNINK ukáže správnou odpověď. NAOSTRO počítá nejlepší sérii správných odpovědí.</p>
+</div></div></section>
+
+<section id="game" class="screen"><div class="wrap"><div class="card">
+  <div class="topbar">
+    <div id="timerPill" class="pill timer">Čas: <span id="time">10</span></div>
+    <div class="pill">Série: <span id="streak">0</span></div>
+    <button class="secondary" onclick="goMenu()">MENU</button>
+  </div>
+  <div class="prompt">Vyber nejvhodnější české synonymum ke zvýrazněnému slovu.</div>
+  <div id="sentence" class="sentence"></div>
+  <div id="options" class="options"></div>
+  <div id="feedback" class="feedback"></div>
+  <button id="nextBtn" class="full hidden" onclick="nextQuestion()">DALŠÍ</button>
+</div></div></section>
+
+<section id="stats" class="screen"><div class="wrap"><div class="card">
+  <h1>Statistika</h1>
+  <div id="statsBox"></div>
+  <button class="full secondary" onclick="goMenu()">ZPĚT</button>
+</div></div></section>
+
+<script>
+const QUESTIONS = [{"q": "Jeho reakce byla zcela <strong>adekvátní</strong> dané situaci.", "a": ["přehnaná", "vhodná", "opožděná", "náhodná"], "c": 1}, {"q": "Komise požadovala <strong>transparentní</strong> postup výběru.", "a": ["průhledný", "rychlý", "tajný", "úřední"], "c": 0}, {"q": "Jeho rozhodnutí bylo značně <strong>kontroverzní</strong>.", "a": ["jednoznačné", "rozporuplné a vyvolávající spory", "nevýznamné", "opožděné"], "c": 1}, {"q": "Text obsahoval několik <strong>ambivalentních</strong> tvrzení.", "a": ["jednoznačných", "dvojsmyslných", "nepravdivých", "odborných"], "c": 1}, {"q": "Jeho vystoupení působilo velmi <strong>spontánně</strong>.", "a": ["nepřipraveně", "přirozeně a bezprostředně", "slavnostně", "hlučně"], "c": 1}, {"q": "Autor zvolil velmi <strong>expresivní</strong> jazyk.", "a": ["citově zabarvený", "spisovný", "zastaralý", "úřední"], "c": 0}, {"q": "Kritika byla sice tvrdá, ale <strong>konstruktivní</strong>.", "a": ["ničivá", "povrchní", "věcně podnětná", "posměšná"], "c": 2}, {"q": "Ve své práci se opírá o <strong>relevantní</strong> zdroje.", "a": ["významné pro dané téma", "staré", "cizojazyčné", "tištěné"], "c": 0}, {"q": "Jeho chování bylo naprosto <strong>iracionální</strong>.", "a": ["nerozumné", "nečekané", "nezdvořilé", "nelegální"], "c": 0}, {"q": "Úřad vydal <strong>definitivní</strong> rozhodnutí.", "a": ["předběžné", "konečné", "stručné", "nepříznivé"], "c": 1}, {"q": "Vypravěč používá <strong>subjektivní</strong> pohled na události.", "a": ["osobní", "přesný", "nezaujatý", "odborný"], "c": 0}, {"q": "V článku se objevila <strong>absurdní</strong> domněnka.", "a": ["směšně nesmyslná", "důležitá", "pravděpodobná", "přísná"], "c": 0}, {"q": "Jeho názor byl v debatě zcela <strong>marginální</strong>.", "a": ["okrajový", "urážlivý", "převratný", "většinový"], "c": 0}, {"q": "Studie přinesla <strong>exaktní</strong> výsledky.", "a": ["přesné", "zajímavé", "překvapivé", "předběžné"], "c": 0}, {"q": "Herec podal velmi <strong>autentický</strong> výkon.", "a": ["pravdivě působící", "veselý", "krátký", "okázalý"], "c": 0}, {"q": "Projev měl výrazně <strong>patetický</strong> tón.", "a": ["jednoduchý", "vznešeně dojemný", "posměšný", "odborný"], "c": 1}, {"q": "Vědec formuloval <strong>hypotézu</strong> o vzniku jevu.", "a": ["ověřený zákon", "domněnku", "zákaz", "výsledek měření"], "c": 1}, {"q": "Politik se snažil problém <strong>bagatelizovat</strong>.", "a": ["zveličovat", "zlehčovat", "objasňovat", "zveřejnit"], "c": 1}, {"q": "Jeho výklad byl příliš <strong>abstraktní</strong>.", "a": ["názorný", "obecný a nehmotný", "stručný", "chybný"], "c": 1}, {"q": "Rozhodnutí mělo <strong>fatální</strong> následky.", "a": ["osudové", "nepatrné", "finanční", "náhodné"], "c": 0}, {"q": "V textu se objevuje <strong>paradoxní</strong> tvrzení.", "a": ["zdánlivě rozporné", "přesně doložené", "neslušné", "běžné"], "c": 0}, {"q": "Výrobce uvedl pouze <strong>orientační</strong> cenu.", "a": ["konečnou", "přibližnou", "tajnou", "zvýhodněnou"], "c": 1}, {"q": "Jeho poznámka byla značně <strong>ironická</strong>.", "a": ["posměšně opačná", "upřímná", "odborná", "lítostivá"], "c": 0}, {"q": "Obě události spolu zřejmě <strong>korespondují</strong>.", "a": ["odporují si", "časově souvisejí", "navzájem odpovídají", "opakují se"], "c": 2}, {"q": "Autor textu zvolil <strong>chronologické</strong> uspořádání děje.", "a": ["podle důležitosti", "podle času", "podle místa", "podle postav"], "c": 1}, {"q": "Jeho argumentace byla velmi <strong>logická</strong>.", "a": ["rozumně uspořádaná", "dlouhá", "útočná", "citová"], "c": 0}, {"q": "Věta má spíše <strong>metaforický</strong> význam.", "a": ["obrazný", "přesný", "odborný", "doslovný"], "c": 0}, {"q": "Důkazy byly pro soud <strong>irelevantní</strong>.", "a": ["rozhodující", "nepodstatné", "nepravdivé", "tajné"], "c": 1}, {"q": "Učitel požadoval <strong>precizní</strong> vypracování úkolu.", "a": ["rychlé", "přesné a pečlivé", "stručné", "originální"], "c": 1}, {"q": "Postava jedná velmi <strong>impulzivně</strong>.", "a": ["podle náhlého popudu", "podle plánu", "velmi pomalu", "bez emocí"], "c": 0}, {"q": "Jeho přístup byl příliš <strong>konzervativní</strong>.", "a": ["novátorský", "lpící na tradici", "chaotický", "přátelský"], "c": 1}, {"q": "Firma připravila <strong>inovativní</strong> řešení.", "a": ["zastaralé", "úsporné", "novátorské", "dočasné"], "c": 2}, {"q": "Text má výrazně <strong>edukativní</strong> funkci.", "a": ["zábavnou", "poučnou", "hodnotící", "reklamní"], "c": 1}, {"q": "Vypravěč události pouze <strong>rekapituluje</strong>.", "a": ["stručně shrnuje", "kritizuje", "zamlčuje", "přikrašluje"], "c": 0}, {"q": "Jeho odpověď byla velmi <strong>lakonická</strong>.", "a": ["stručná", "nezdvořilá", "nejasná", "slavnostní"], "c": 0}, {"q": "Spisovatel záměrně použil <strong>archaický</strong> výraz.", "a": ["nářeční", "zastaralý", "nespisovný", "odborný"], "c": 1}, {"q": "V projevu zazněla <strong>apelativní</strong> výzva.", "a": ["naléhavá", "vtipná", "nejasná", "úřední"], "c": 0}, {"q": "Článek měl spíše <strong>populárně-naučný</strong> charakter.", "a": ["odborný pro specialisty", "poučný pro širší veřejnost", "umělecký", "soukromý"], "c": 1}, {"q": "Postava prochází výraznou <strong>transformací</strong>.", "a": ["proměnou", "zklamáním", "cestou", "zkouškou"], "c": 0}, {"q": "Situace vyžadovala <strong>diskrétní</strong> jednání.", "a": ["hlučné", "taktní a ohleduplné", "rychlé", "veřejné"], "c": 1}, {"q": "Autor použil <strong>kontrastní</strong> zobrazení dvou světů.", "a": ["podobné", "protikladné", "nepřesné", "náhodné"], "c": 1}, {"q": "Jeho tvrzení bylo nutné <strong>verifikovat</strong>.", "a": ["ověřit", "odmítnout", "opsat", "zveřejnit"], "c": 0}, {"q": "Výsledek byl pouze <strong>provizorní</strong>.", "a": ["dočasný", "konečný", "oficiální", "chybný"], "c": 0}, {"q": "V závěru textu se objevuje <strong>gradace</strong> napětí.", "a": ["postupné zesilování", "přerušení", "opakování", "vysvětlení"], "c": 0}, {"q": "Projev působil až <strong>monotónně</strong>.", "a": ["jednotvárně", "slavnostně", "zmateně", "přehnaně"], "c": 0}, {"q": "Jeho názor byl v rozporu s <strong>konvencemi</strong> doby.", "a": ["zvyklostmi", "zákony", "sny", "dokumenty"], "c": 0}, {"q": "V textu je patrná <strong>tendence</strong> idealizovat minulost.", "a": ["snaha", "chyba", "překážka", "jistota"], "c": 0}, {"q": "Autor využil <strong>aluzí</strong> na známé biblické příběhy.", "a": ["citátů", "narážek", "výkladů", "překladů"], "c": 1}, {"q": "Úvodní odstavec má <strong>informativní</strong> charakter.", "a": ["ozdobný", "sdělovací", "útočný", "zábavný"], "c": 1}, {"q": "Její chování bylo v dané situaci <strong>empatické</strong>.", "a": ["soucitné", "nerozhodné", "přísné", "vypočítavé"], "c": 0}, {"q": "Jeho chování bylo značně <strong>arogantní</strong>.", "a": ["sebejisté", "povýšené", "nejisté", "přátelské"], "c": 1}, {"q": "Projev měl <strong>koherentní</strong> strukturu.", "a": ["nesouvislou", "soudržnou", "složitou", "krátkou"], "c": 1}, {"q": "Jeho reakce byla velmi <strong>rezolutní</strong>.", "a": ["váhavá", "rozhodná", "tichá", "zdlouhavá"], "c": 1}, {"q": "V textu chybí <strong>explicitní</strong> vysvětlení pojmu.", "a": ["skryté", "výslovné", "odborné", "stručné"], "c": 1}, {"q": "Autor použil <strong>implicitní</strong> narážku.", "a": ["zjevnou", "skrytou", "nesmyslnou", "dlouhou"], "c": 1}, {"q": "Jeho přístup byl značně <strong>pragmatický</strong>.", "a": ["teoretický", "praktický", "váhavý", "citový"], "c": 1}, {"q": "Projev působil velmi <strong>charismaticky</strong>.", "a": ["nudně", "přitažlivě", "zmateně", "agresivně"], "c": 1}, {"q": "Argument byl zcela <strong>validní</strong>.", "a": ["neplatný", "platný", "slabý", "nejasný"], "c": 1}, {"q": "Věta má výrazně <strong>redundantní</strong> charakter.", "a": ["stručný", "nadbytečně opakující", "nejasný", "odborný"], "c": 1}, {"q": "Autor se vyjadřuje velmi <strong>explicitně</strong>.", "a": ["nepřímo", "přímo a jasně", "složitě", "neurčitě"], "c": 1}, {"q": "Výklad byl značně <strong>schematický</strong>.", "a": ["detailní", "zjednodušený", "nepřehledný", "dlouhý"], "c": 1}, {"q": "Jeho poznámka byla poněkud <strong>cynická</strong>.", "a": ["laskavá", "posměšně bezohledná", "vážná", "odborná"], "c": 1}, {"q": "Řešení bylo spíše <strong>intuitivní</strong>.", "a": ["promyšlené", "založené na pocitu", "náhodné", "složité"], "c": 1}, {"q": "Výrok působí velmi <strong>generalizující</strong>.", "a": ["konkrétní", "zobecňující", "přesný", "úzký"], "c": 1}, {"q": "Text je značně <strong>fragmentární</strong>.", "a": ["souvislý", "roztříštěný", "dlouhý", "stručný"], "c": 1}, {"q": "Jeho tvrzení bylo <strong>neopodstatněné</strong>.", "a": ["podložené", "bez důkazů", "pravdivé", "jasné"], "c": 1}, {"q": "V projevu zazněla <strong>apelativní</strong> složka.", "a": ["popisná", "výzvová", "vyprávěcí", "úvahová"], "c": 1}, {"q": "Styl je výrazně <strong>ornamentální</strong>.", "a": ["jednoduchý", "zdobný", "odborný", "strohý"], "c": 1}, {"q": "Jeho jednání bylo zcela <strong>legitimní</strong>.", "a": ["nezákonné", "oprávněné", "překvapivé", "tajné"], "c": 1}, {"q": "Text působí značně <strong>konfuzně</strong>.", "a": ["jasně", "zmateně", "stručně", "přehledně"], "c": 1}];
+const TIME_LIMIT = 10;
+let player = JSON.parse(localStorage.getItem('lovciSynonym_player') || 'null');
+let stats = JSON.parse(localStorage.getItem('lovciSynonym_stats') || '{"answered":0,"correct":0,"bestStreak":0,"games":0}');
+let mode = 'train', current = null, order = [], pos = 0, locked = false, timer = null, timeLeft = TIME_LIMIT, streak = 0;
+
+function $(id){return document.getElementById(id)}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active')}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]} return a}
+function playTone(type){
+ try {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AudioContext();
+  const now = ctx.currentTime;
+  const master = ctx.createGain();
+  master.connect(ctx.destination);
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.exponentialRampToValueAtTime(type==='win'?0.22:0.16, now + 0.015);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + (type==='win'?0.85:0.28));
+  const makeOsc = (freq, start, dur, wave='sine') => {
+   const osc = ctx.createOscillator();
+   const gain = ctx.createGain();
+   osc.type = wave; osc.frequency.setValueAtTime(freq, now + start);
+   gain.gain.setValueAtTime(0.0001, now + start);
+   gain.gain.exponentialRampToValueAtTime(1, now + start + 0.015);
+   gain.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+   osc.connect(gain); gain.connect(master);
+   osc.start(now + start); osc.stop(now + start + dur + 0.03);
+  };
+  if(type==='ok'){ makeOsc(660,0,0.12); makeOsc(880,0.09,0.16); }
+  else if(type==='bad'){ makeOsc(190,0,0.22,'sawtooth'); makeOsc(145,0.08,0.22,'sawtooth'); }
+  else if(type==='tick'){ makeOsc(440,0,0.06,'square'); }
+  else if(type==='win'){ [523,659,784,1046].forEach((f,i)=>makeOsc(f,i*0.12,0.22)); }
+ } catch(e) {}
+}
+
+function init(){
+ if(player){ $('who').textContent = player.name + ' · ' + player.cls; show('menu'); }
+}
+function savePlayer(){
+ const name = $('name').value.trim(); const cls = $('cls').value.trim().toUpperCase();
+ if(!name || !cls){ alert('Vyplň prosím jméno i třídu.'); return; }
+ player = {name, cls};
+ localStorage.setItem('lovciSynonym_player', JSON.stringify(player));
+ $('who').textContent = player.name + ' · ' + player.cls;
+ show('menu');
+}
+function changePlayer(){
+ $('name').value = player?.name || ''; $('cls').value = player?.cls || '';
+ show('login');
+}
+function goMenu(){ clearInterval(timer); show('menu'); }
+
+function startGame(m){
+ mode = m; streak = 0; pos = 0; locked = false;
+ order = shuffle([...Array(QUESTIONS.length).keys()]);
+ if(mode==='test'){ stats.games++; saveStats(); }
+ $('timerPill').classList.toggle('hidden', mode==='train');
+ show('game'); nextQuestion();
+}
+
+function nextQuestion(){
+ locked = false; $('nextBtn').classList.add('hidden'); $('feedback').innerHTML = '';
+ $('streak').textContent = streak;
+ if(pos >= order.length){ order = shuffle([...Array(QUESTIONS.length).keys()]); pos = 0; }
+ current = QUESTIONS[order[pos++]];
+ $('sentence').innerHTML = current.q;
+ renderOptions();
+ startTimer();
+}
+
+function renderOptions(){
+ const box = $('options'); box.innerHTML='';
+ current.a.forEach((txt,i)=>{
+  const b = document.createElement('button');
+  b.className='opt'; b.innerHTML = '<b>' + String.fromCharCode(65+i) + '</b> ' + txt;
+  b.onclick=()=>answer(i,b);
+  box.appendChild(b);
+ });
+}
+
+function startTimer(){
+ clearInterval(timer);
+ if(mode==='train') return;
+ timeLeft = TIME_LIMIT; $('time').textContent = timeLeft;
+ timer = setInterval(()=>{
+  timeLeft--; $('time').textContent = timeLeft;
+  if(timeLeft <= 3 && timeLeft > 0) playTone('tick');
+  if(timeLeft <= 0){ clearInterval(timer); timeoutAnswer(); }
+ },1000);
+}
+
+function timeoutAnswer(){
+ if(locked) return; locked=true; streak=0; $('streak').textContent=streak;
+ playTone('bad');
+ reveal(-1);
+}
+
+function answer(i,btn){
+ if(locked) return; locked=true; clearInterval(timer);
+ const ok = i === current.c;
+ if(ok){ streak++; stats.correct++; playTone(streak>=10 ? 'win' : 'ok'); }
+ else { streak=0; playTone('bad'); }
+ stats.answered++; if(streak > stats.bestStreak) stats.bestStreak = streak; saveStats();
+ reveal(i);
+}
+
+function reveal(chosen){
+ const buttons = [...document.querySelectorAll('.opt')];
+ buttons.forEach((b,i)=>{
+   if(i===current.c) b.classList.add('correct');
+   if(i===chosen && i!==current.c) b.classList.add('wrong');
+ });
+ const ok = chosen === current.c;
+ if(ok) {
+   $('feedback').innerHTML = 'SPRÁVNĚ';
+   setTimeout(()=>{ if(locked) nextQuestion(); }, mode==='test'?850:1200);
+ } else {
+   const correct = String.fromCharCode(65+current.c) + ' – ' + current.a[current.c];
+   $('feedback').innerHTML = mode==='train' ? 'CHYBA<small>Správná odpověď: ' + correct + '</small>' : 'CHYBA';
+   $('nextBtn').classList.remove('hidden');
+ }
+ $('streak').textContent = streak;
+}
+
+function saveStats(){ localStorage.setItem('lovciSynonym_stats', JSON.stringify(stats)); }
+function showStats(){
+ const pct = stats.answered ? Math.round(stats.correct/stats.answered*100) : 0;
+ $('statsBox').innerHTML = `<table class="table">
+ <tr><th>Odehrané režimy NAOSTRO</th><td>${stats.games}</td></tr>
+ <tr><th>Zodpovězeno otázek</th><td>${stats.answered}</td></tr>
+ <tr><th>Správně</th><td>${stats.correct} (${pct} %)</td></tr>
+ <tr><th>Nejlepší série</th><td>${stats.bestStreak}</td></tr>
+ </table>`;
+ show('stats');
+}
+init();
+</script>
+</body>
+</html>
