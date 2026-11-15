@@ -1,0 +1,2076 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lovci synonym</title>
+<style>
+:root {
+  --bg:#0f172a; --panel:#111827; --card:#1f2937; --text:#f8fafc; --muted:#cbd5e1;
+  --accent:#f59e0b; --ok:#22c55e; --bad:#ef4444; --blue:#38bdf8;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0; min-height:100vh; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  color:var(--text); background:
+  radial-gradient(circle at 20% 10%, rgba(245,158,11,.22), transparent 30%),
+  radial-gradient(circle at 90% 20%, rgba(56,189,248,.14), transparent 32%),
+  linear-gradient(135deg, #020617, #111827 55%, #0f172a);
+}
+.screen { display:none; min-height:100vh; padding:20px; align-items:center; justify-content:center; }
+.screen.active { display:flex; }
+.wrap { width:min(760px, 100%); }
+.card {
+  background:rgba(17,24,39,.88); border:1px solid rgba(255,255,255,.12);
+  border-radius:24px; padding:22px; box-shadow:0 18px 60px rgba(0,0,0,.35);
+}
+h1 { margin:0 0 10px; text-align:center; font-size:clamp(32px, 8vw, 58px); letter-spacing:.5px; }
+.subtitle { text-align:center; color:var(--muted); margin-bottom:18px; font-size:18px; }
+label { display:block; color:var(--muted); margin:14px 0 6px; font-weight:700; }
+input {
+  width:100%; padding:14px 16px; border-radius:16px; border:1px solid rgba(255,255,255,.15);
+  background:#020617; color:var(--text); font-size:20px; outline:none;
+}
+.row { display:flex; gap:12px; flex-wrap:wrap; }
+button {
+  appearance:none; border:0; border-radius:18px; padding:15px 16px; cursor:pointer;
+  font-weight:900; letter-spacing:.4px; font-size:18px; color:#0f172a; background:var(--accent);
+  box-shadow:0 8px 0 rgba(0,0,0,.22); transition:.08s transform, .08s box-shadow, .15s filter;
+}
+button:active { transform:translateY(4px); box-shadow:0 4px 0 rgba(0,0,0,.22); }
+button.secondary { background:#e5e7eb; }
+button.blue { background:var(--blue); }
+button.green { background:var(--ok); }
+button.red { background:var(--bad); color:white; }
+.full { width:100%; margin-top:12px; }
+.menuGrid { display:grid; grid-template-columns:1fr; gap:14px; margin-top:18px; }
+.topbar { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+.pill { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.1); padding:9px 12px; border-radius:999px; font-weight:800; }
+.timer { color:#fff; background:rgba(245,158,11,.18); border-color:rgba(245,158,11,.35); }
+.prompt { color:var(--muted); font-size:18px; text-align:center; margin:8px 0; }
+.sentence {
+  font-size:clamp(24px, 6vw, 36px); line-height:1.25; text-align:center; margin:18px 0 18px;
+  padding:18px; background:rgba(2,6,23,.55); border-radius:22px;
+}
+.sentence strong { color:#fde68a; text-decoration:underline; text-underline-offset:6px; }
+.options { display:grid; grid-template-columns:1fr; gap:12px; }
+.opt {
+  background:#f8fafc; color:#111827; text-align:left; font-size:clamp(19px, 4.8vw, 26px);
+  padding:17px 18px; border-radius:20px; box-shadow:none; border:2px solid transparent;
+}
+.opt.correct { background:rgba(34,197,94,.95); color:#06240f; }
+.opt.wrong { background:rgba(239,68,68,.95); color:white; }
+.feedback { min-height:88px; text-align:center; padding-top:14px; font-weight:1000; font-size:clamp(30px, 7vw, 52px); }
+.feedback small { display:block; margin-top:8px; color:var(--muted); font-size:18px; font-weight:700; }
+.table { width:100%; border-collapse:collapse; margin-top:12px; overflow:hidden; border-radius:16px; }
+td,th { padding:10px; border-bottom:1px solid rgba(255,255,255,.1); text-align:left; }
+th { color:#fde68a; }
+.hidden { display:none !important; }
+.note { color:var(--muted); font-size:15px; text-align:center; }
+@media (min-width:700px) {
+ .menuGrid { grid-template-columns:1fr 1fr; }
+ .options { grid-template-columns:1fr 1fr; }
+}
+.resultsLink { display:block; padding:15px; border-radius:18px; background:#e5e7eb; color:#0f172a; font-weight:900; text-align:center; text-decoration:none; }
+.opt:disabled { cursor:default; transform:none; }
+</style>
+</head>
+<body>
+<section id="login" class="screen"><div class="wrap"><div class="card">
+  <h1 id="loginTitle"></h1>
+  <form onsubmit="event.preventDefault(); savePlayer()">
+    <label for="name">Příjmení</label><input id="name" autocomplete="family-name" placeholder="např. Nováková" required>
+    <label for="cls">Třída</label><input id="cls" placeholder="např. 4A" required>
+    <button class="full">ZAČÍT</button>
+  </form>
+  <button class="full secondary" onclick="goMenu()">HLAVNÍ MENU</button>
+</div></div></section>
+
+<section id="menu" class="screen active"><div class="wrap"><div class="card">
+  <h1>Lovci synonym</h1>
+  <div class="subtitle">Cizí slovo v kontextu. Najdi nejvhodnější české synonymum.</div>
+  <div class="menuGrid">
+    <button class="blue" onclick="pickMode('train')">TRÉNINK</button>
+    <button class="green" onclick="pickMode('challenge')">VÝZVA</button>
+    <button class="red" onclick="pickMode('test')">TEST</button>
+    <button class="secondary" onclick="showStats()">STATISTIKA</button>
+  </div>
+  <a class="resultsLink full" target="_blank" rel="noopener noreferrer">VÝSLEDKOVÁ TABULKA</a>
+  <p class="note">TRÉNINK probíhá bez časového limitu. Ve VÝZVĚ je cílem 20 správných odpovědí v řadě. Chyba nebo vypršení času spustí novou sérii. TEST má 20 otázek.</p>
+  <p class="note">VÝZVA a TEST dávají 10 sekund na otázku. Opuštění aktivního okna ukončí pokus se známkou 6.</p>
+  <table class="table"><tr><th>Body</th><td>20–18</td><td>17–16</td><td>15–14</td><td>13–12</td><td>11–0</td></tr>
+  <tr><th>Známka</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr></table>
+</div></div></section>
+
+<section id="game" class="screen"><div class="wrap"><div class="card">
+  <div class="topbar">
+    <div id="timerPill" class="pill timer">Čas: <span id="time">10</span></div>
+    <div class="pill" id="modePill"></div>
+    <div class="pill" id="progress"></div>
+    <button class="secondary" onclick="goMenu()">MENU</button>
+  </div>
+  <div class="prompt">Vyber nejvhodnější české synonymum ke zvýrazněnému slovu.</div>
+  <div id="sentence" class="sentence"></div>
+  <div id="options" class="options"></div>
+  <div id="feedback" class="feedback" aria-live="polite"></div>
+  <button id="nextBtn" class="full hidden" onclick="advance()">DALŠÍ</button>
+</div></div></section>
+
+<section id="result" class="screen"><div class="wrap"><div class="card">
+  <h1 id="resultTitle"></h1>
+  <p class="subtitle" id="resultPlayer"></p>
+  <p class="subtitle" id="resultDetails"></p>
+  <p class="note" id="sendStatus" aria-live="polite"></p>
+  <a class="resultsLink full" target="_blank" rel="noopener noreferrer">VÝSLEDKOVÁ TABULKA</a>
+  <button class="full secondary" onclick="goMenu()">HLAVNÍ MENU</button>
+</div></div></section>
+
+<section id="stats" class="screen"><div class="wrap"><div class="card">
+  <h1>Statistika</h1>
+  <div id="statsBox"></div>
+  <button class="full secondary" onclick="goMenu()">ZPĚT</button>
+</div></div></section>
+
+<script>
+const QUESTIONS = [
+  {
+    "q": "Jeho reakce byla zcela <strong>adekvátní</strong> dané situaci.",
+    "a": [
+      "přehnaná",
+      "vhodná",
+      "opožděná",
+      "náhodná"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Komise požadovala <strong>transparentní</strong> postup výběru.",
+    "a": [
+      "průhledný",
+      "rychlý",
+      "tajný",
+      "úřední"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Jeho rozhodnutí bylo značně <strong>kontroverzní</strong>.",
+    "a": [
+      "jednoznačné",
+      "rozporuplné a vyvolávající spory",
+      "nevýznamné",
+      "opožděné"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Text obsahoval několik <strong>ambivalentních</strong> tvrzení.",
+    "a": [
+      "jednoznačných",
+      "dvojsmyslných",
+      "nepravdivých",
+      "odborných"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Jeho vystoupení působilo velmi <strong>spontánně</strong>.",
+    "a": [
+      "nepřipraveně",
+      "přirozeně a bezprostředně",
+      "slavnostně",
+      "hlučně"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Autor zvolil velmi <strong>expresivní</strong> jazyk.",
+    "a": [
+      "citově zabarvený",
+      "spisovný",
+      "zastaralý",
+      "úřední"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Kritika byla sice tvrdá, ale <strong>konstruktivní</strong>.",
+    "a": [
+      "ničivá",
+      "povrchní",
+      "věcně podnětná",
+      "posměšná"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Ve své práci se opírá o <strong>relevantní</strong> zdroje.",
+    "a": [
+      "významné pro dané téma",
+      "staré",
+      "cizojazyčné",
+      "tištěné"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Jeho chování bylo naprosto <strong>iracionální</strong>.",
+    "a": [
+      "nerozumné",
+      "nečekané",
+      "nezdvořilé",
+      "nelegální"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Úřad vydal <strong>definitivní</strong> rozhodnutí.",
+    "a": [
+      "předběžné",
+      "konečné",
+      "stručné",
+      "nepříznivé"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Vypravěč používá <strong>subjektivní</strong> pohled na události.",
+    "a": [
+      "osobní",
+      "přesný",
+      "nezaujatý",
+      "odborný"
+    ],
+    "c": 0
+  },
+  {
+    "q": "V článku se objevila <strong>absurdní</strong> domněnka.",
+    "a": [
+      "směšně nesmyslná",
+      "důležitá",
+      "pravděpodobná",
+      "přísná"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Jeho názor byl v debatě zcela <strong>marginální</strong>.",
+    "a": [
+      "okrajový",
+      "urážlivý",
+      "převratný",
+      "většinový"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Studie přinesla <strong>exaktní</strong> výsledky.",
+    "a": [
+      "přesné",
+      "zajímavé",
+      "překvapivé",
+      "předběžné"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Herec podal velmi <strong>autentický</strong> výkon.",
+    "a": [
+      "pravdivě působící",
+      "veselý",
+      "krátký",
+      "okázalý"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Projev měl výrazně <strong>patetický</strong> tón.",
+    "a": [
+      "jednoduchý",
+      "vznešeně dojemný",
+      "posměšný",
+      "odborný"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Vědec formuloval <strong>hypotézu</strong> o vzniku jevu.",
+    "a": [
+      "ověřený zákon",
+      "domněnku",
+      "zákaz",
+      "výsledek měření"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Politik se snažil problém <strong>bagatelizovat</strong>.",
+    "a": [
+      "zveličovat",
+      "zlehčovat",
+      "objasňovat",
+      "zveřejnit"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Jeho výklad byl příliš <strong>abstraktní</strong>.",
+    "a": [
+      "názorný",
+      "obecný a nehmotný",
+      "stručný",
+      "chybný"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Rozhodnutí mělo <strong>fatální</strong> následky.",
+    "a": [
+      "osudové",
+      "nepatrné",
+      "finanční",
+      "náhodné"
+    ],
+    "c": 0
+  },
+  {
+    "q": "V textu se objevuje <strong>paradoxní</strong> tvrzení.",
+    "a": [
+      "zdánlivě rozporné",
+      "přesně doložené",
+      "neslušné",
+      "běžné"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Výrobce uvedl pouze <strong>orientační</strong> cenu.",
+    "a": [
+      "konečnou",
+      "přibližnou",
+      "tajnou",
+      "zvýhodněnou"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Jeho poznámka byla značně <strong>ironická</strong>.",
+    "a": [
+      "posměšně opačná",
+      "upřímná",
+      "odborná",
+      "lítostivá"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Obě události spolu zřejmě <strong>korespondují</strong>.",
+    "a": [
+      "odporují si",
+      "časově souvisejí",
+      "navzájem odpovídají",
+      "opakují se"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Autor textu zvolil <strong>chronologické</strong> uspořádání děje.",
+    "a": [
+      "podle důležitosti",
+      "podle času",
+      "podle místa",
+      "podle postav"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Jeho argumentace byla velmi <strong>logická</strong>.",
+    "a": [
+      "rozumně uspořádaná",
+      "dlouhá",
+      "útočná",
+      "citová"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Věta má spíše <strong>metaforický</strong> význam.",
+    "a": [
+      "obrazný",
+      "přesný",
+      "odborný",
+      "doslovný"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Důkazy byly pro soud <strong>irelevantní</strong>.",
+    "a": [
+      "rozhodující",
+      "nepodstatné",
+      "nepravdivé",
+      "tajné"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Učitel požadoval <strong>precizní</strong> vypracování úkolu.",
+    "a": [
+      "rychlé",
+      "přesné a pečlivé",
+      "stručné",
+      "originální"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Postava jedná velmi <strong>impulzivně</strong>.",
+    "a": [
+      "podle náhlého popudu",
+      "podle plánu",
+      "velmi pomalu",
+      "bez emocí"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Jeho přístup byl příliš <strong>konzervativní</strong>.",
+    "a": [
+      "novátorský",
+      "lpící na tradici",
+      "chaotický",
+      "přátelský"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Firma připravila <strong>inovativní</strong> řešení.",
+    "a": [
+      "zastaralé",
+      "úsporné",
+      "novátorské",
+      "dočasné"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Text má výrazně <strong>edukativní</strong> funkci.",
+    "a": [
+      "zábavnou",
+      "poučnou",
+      "hodnotící",
+      "reklamní"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Vypravěč události pouze <strong>rekapituluje</strong>.",
+    "a": [
+      "stručně shrnuje",
+      "kritizuje",
+      "zamlčuje",
+      "přikrašluje"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Jeho odpověď byla velmi <strong>lakonická</strong>.",
+    "a": [
+      "stručná",
+      "nezdvořilá",
+      "nejasná",
+      "slavnostní"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Spisovatel záměrně použil <strong>archaický</strong> výraz.",
+    "a": [
+      "nářeční",
+      "zastaralý",
+      "nespisovný",
+      "odborný"
+    ],
+    "c": 1
+  },
+  {
+    "q": "V projevu zazněla <strong>apelativní</strong> výzva.",
+    "a": [
+      "naléhavá",
+      "vtipná",
+      "nejasná",
+      "úřední"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Článek měl spíše <strong>populárně-naučný</strong> charakter.",
+    "a": [
+      "odborný pro specialisty",
+      "poučný pro širší veřejnost",
+      "umělecký",
+      "soukromý"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Postava prochází výraznou <strong>transformací</strong>.",
+    "a": [
+      "proměnou",
+      "zklamáním",
+      "cestou",
+      "zkouškou"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Situace vyžadovala <strong>diskrétní</strong> jednání.",
+    "a": [
+      "hlučné",
+      "taktní a ohleduplné",
+      "rychlé",
+      "veřejné"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Autor použil <strong>kontrastní</strong> zobrazení dvou světů.",
+    "a": [
+      "podobné",
+      "protikladné",
+      "nepřesné",
+      "náhodné"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Jeho tvrzení bylo nutné <strong>verifikovat</strong>.",
+    "a": [
+      "ověřit",
+      "odmítnout",
+      "opsat",
+      "zveřejnit"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Výsledek byl pouze <strong>provizorní</strong>.",
+    "a": [
+      "dočasný",
+      "konečný",
+      "oficiální",
+      "chybný"
+    ],
+    "c": 0
+  },
+  {
+    "q": "V závěru textu se objevuje <strong>gradace</strong> napětí.",
+    "a": [
+      "postupné zesilování",
+      "přerušení",
+      "opakování",
+      "vysvětlení"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Projev působil až <strong>monotónně</strong>.",
+    "a": [
+      "jednotvárně",
+      "slavnostně",
+      "zmateně",
+      "přehnaně"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Jeho názor byl v rozporu s <strong>konvencemi</strong> doby.",
+    "a": [
+      "zvyklostmi",
+      "zákony",
+      "sny",
+      "dokumenty"
+    ],
+    "c": 0
+  },
+  {
+    "q": "V textu je patrná <strong>tendence</strong> idealizovat minulost.",
+    "a": [
+      "snaha",
+      "chyba",
+      "překážka",
+      "jistota"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Autor využil <strong>aluzí</strong> na známé biblické příběhy.",
+    "a": [
+      "citátů",
+      "narážek",
+      "výkladů",
+      "překladů"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Úvodní odstavec má <strong>informativní</strong> charakter.",
+    "a": [
+      "ozdobný",
+      "sdělovací",
+      "útočný",
+      "zábavný"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Její chování bylo v dané situaci <strong>empatické</strong>.",
+    "a": [
+      "soucitné",
+      "nerozhodné",
+      "přísné",
+      "vypočítavé"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Jeho chování bylo značně <strong>arogantní</strong>.",
+    "a": [
+      "sebejisté",
+      "povýšené",
+      "nejisté",
+      "přátelské"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Projev měl <strong>koherentní</strong> strukturu.",
+    "a": [
+      "nesouvislou",
+      "soudržnou",
+      "složitou",
+      "krátkou"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Jeho reakce byla velmi <strong>rezolutní</strong>.",
+    "a": [
+      "váhavá",
+      "rozhodná",
+      "tichá",
+      "zdlouhavá"
+    ],
+    "c": 1
+  },
+  {
+    "q": "V textu chybí <strong>explicitní</strong> vysvětlení pojmu.",
+    "a": [
+      "skryté",
+      "výslovné",
+      "odborné",
+      "stručné"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Autor použil <strong>implicitní</strong> narážku.",
+    "a": [
+      "zjevnou",
+      "skrytou",
+      "nesmyslnou",
+      "dlouhou"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Jeho přístup byl značně <strong>pragmatický</strong>.",
+    "a": [
+      "teoretický",
+      "praktický",
+      "váhavý",
+      "citový"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Projev působil velmi <strong>charismaticky</strong>.",
+    "a": [
+      "nudně",
+      "přitažlivě",
+      "zmateně",
+      "agresivně"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Argument byl zcela <strong>validní</strong>.",
+    "a": [
+      "neplatný",
+      "platný",
+      "slabý",
+      "nejasný"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Věta má výrazně <strong>redundantní</strong> charakter.",
+    "a": [
+      "stručný",
+      "nadbytečně opakující",
+      "nejasný",
+      "odborný"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Autor se vyjadřuje velmi <strong>explicitně</strong>.",
+    "a": [
+      "nepřímo",
+      "přímo a jasně",
+      "složitě",
+      "neurčitě"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Výklad byl značně <strong>schematický</strong>.",
+    "a": [
+      "detailní",
+      "zjednodušený",
+      "nepřehledný",
+      "dlouhý"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Jeho poznámka byla poněkud <strong>cynická</strong>.",
+    "a": [
+      "laskavá",
+      "posměšně bezohledná",
+      "vážná",
+      "odborná"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Řešení bylo spíše <strong>intuitivní</strong>.",
+    "a": [
+      "promyšlené",
+      "založené na pocitu",
+      "náhodné",
+      "složité"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Výrok působí velmi <strong>generalizující</strong>.",
+    "a": [
+      "konkrétní",
+      "zobecňující",
+      "přesný",
+      "úzký"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Text je značně <strong>fragmentární</strong>.",
+    "a": [
+      "souvislý",
+      "roztříštěný",
+      "dlouhý",
+      "stručný"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Jeho tvrzení bylo <strong>neopodstatněné</strong>.",
+    "a": [
+      "podložené",
+      "bez důkazů",
+      "pravdivé",
+      "jasné"
+    ],
+    "c": 1
+  },
+  {
+    "q": "V projevu zazněla <strong>apelativní</strong> složka.",
+    "a": [
+      "popisná",
+      "výzvová",
+      "vyprávěcí",
+      "úvahová"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Styl je výrazně <strong>ornamentální</strong>.",
+    "a": [
+      "jednoduchý",
+      "zdobný",
+      "odborný",
+      "strohý"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Jeho jednání bylo zcela <strong>legitimní</strong>.",
+    "a": [
+      "nezákonné",
+      "oprávněné",
+      "překvapivé",
+      "tajné"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Text působí značně <strong>konfuzně</strong>.",
+    "a": [
+      "jasně",
+      "zmateně",
+      "stručně",
+      "přehledně"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Po pádu si řidič <strong>dezinfikoval</strong> odřeninu.",
+    "a": [
+      "zakryl ji obvazem",
+      "ošetřil ji proti choroboplodným zárodkům",
+      "zchladil ji ledem",
+      "znecitlivěl ji"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Před zimou musíme tepelně <strong>izolovat</strong> potrubí, aby voda nezamrzala.",
+    "a": [
+      "prodloužit je",
+      "vyčistit je",
+      "vyměnit je",
+      "opatřit je ochrannou vrstvou proti chladu"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Při testu měla aplikace <strong>simulovat</strong> výpadek proudu bez přerušení dodávky elektřiny.",
+    "a": [
+      "napodobit",
+      "zaznamenat",
+      "předpovědět",
+      "odstranit"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Lékárník nás <strong>instruoval</strong>, jak dávkovač správně používat.",
+    "a": [
+      "vyzkoušel nás",
+      "pochválil nás",
+      "dal nám pokyny",
+      "vyzval nás k odchodu"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Zkouška se konala <strong>individuálně</strong>, každý uchazeč přišel na řadu zvlášť.",
+    "a": [
+      "dobrovolně",
+      "jednotlivě",
+      "písemně",
+      "opakovaně"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Studentka podala <strong>anonymní</strong> podnět, protože se bála ozvat pod vlastním jménem.",
+    "a": [
+      "neúplný",
+      "naléhavý",
+      "ústní",
+      "bez uvedení totožnosti"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Ze tří návrhů si mohou zastupitelé vybrat jednu <strong>alternativu</strong>.",
+    "a": [
+      "možnost",
+      "podmínku",
+      "překážku",
+      "připomínku"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Smlouva je <strong>kompatibilní</strong> s pravidly programu, takže ji můžeme podepsat beze změn.",
+    "a": [
+      "přísnější než pravidla",
+      "závislá na změně pravidel",
+      "slučitelná s pravidly",
+      "pravidlům nadřazená"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Přestože měl tým dobré výsledky, vedení <strong>redukovalo</strong> jeho rozpočet o deset procent.",
+    "a": [
+      "rozšířilo",
+      "zatajilo",
+      "dočasně pozastavilo",
+      "snížilo"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Nový most umožní <strong>eliminovat</strong> nutnost dlouhé objížďky.",
+    "a": [
+      "odstranit",
+      "zdůvodnit",
+      "vyznačit",
+      "odložit"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Poradkyně nám pomohla <strong>identifikovat</strong> příčinu opakovaných chyb v evidenci.",
+    "a": [
+      "zakrýt",
+      "vyvrátit",
+      "určit",
+      "změnit"
+    ],
+    "c": 2
+  },
+  {
+    "q": "V diskusi zazněla i <strong>dezinterpretace</strong> autorova výroku, která úplně obrátila jeho smysl.",
+    "a": [
+      "zkrácená citace",
+      "zkreslený výklad",
+      "věcná námitka",
+      "doslovný překlad"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Než město změní jízdní řády, bude návrh <strong>konzultovat</strong> s dopravci.",
+    "a": [
+      "probírat s nimi a radit se",
+      "zveřejňovat",
+      "schvalovat",
+      "vyhlašovat"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Úkolem správce je <strong>koordinovat</strong> práci údržbářů, aby si při opravách navzájem nepřekáželi.",
+    "a": [
+      "hodnotit jejich výkon",
+      "zajišťovat nábor",
+      "kontrolovat docházku",
+      "slaďovat jejich činnost"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Nová učitelka se brzy <strong>adaptovala</strong> na jiný rozvrh.",
+    "a": [
+      "přizpůsobila se",
+      "zapomněla",
+      "rezignovala",
+      "upozornila"
+    ],
+    "c": 0
+  },
+  {
+    "q": "I po změně termínu má klub <strong>garantovaný</strong> přístup do tělocvičny.",
+    "a": [
+      "zpoplatněný",
+      "jednorázový",
+      "zaručený",
+      "omezený"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Studenti dostali za úkol <strong>interpretovat</strong> závěr básně.",
+    "a": [
+      "doplnit chybějící verše",
+      "vyložit jeho význam",
+      "označit rýmy",
+      "přečíst ho nahlas"
+    ],
+    "c": 1
+  },
+  {
+    "q": "K návrhu se vyjádřili také <strong>kompetentní</strong> pracovníci odboru, kteří jako jediní smějí o žádosti rozhodnout.",
+    "a": [
+      "pověření kontrolou docházky",
+      "osobně zúčastnění",
+      "dlouholetí",
+      "oprávnění rozhodovat"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Obě strany nakonec přistoupily na <strong>kompromis</strong> a každá se vzdala části svých požadavků.",
+    "a": [
+      "dohodu založenou na ústupcích",
+      "odklad jednání",
+      "úplné přijetí původního návrhu",
+      "rozhodnutí nezávislého soudce"
+    ],
+    "c": 0
+  },
+  {
+    "q": "O rozdělení peněz rozhoduje jediné <strong>kritérium</strong>, počet zapojených žáků.",
+    "a": [
+      "odhad",
+      "námitka",
+      "hledisko",
+      "výjimka"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Škola zavedla ranní dohled jako <strong>prevenci</strong> úrazů na kluzkých schodech.",
+    "a": [
+      "vyšetřování příčin",
+      "odškodnění",
+      "ohlašování",
+      "předcházení"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Výměna osvětlení je letos <strong>prioritou</strong>, ostatní opravy mohou počkat.",
+    "a": [
+      "záležitostí s nejvyšší předností",
+      "výhledem na příští rok",
+      "volitelnou možností",
+      "nejdražší položkou"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Škola získala <strong>dotaci</strong> z krajského rozpočtu na obnovu učeben.",
+    "a": [
+      "půjčku k pozdějšímu splacení",
+      "účelový finanční příspěvek",
+      "povolení ke stavbě",
+      "slevu na materiál"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Technik <strong>specifikoval</strong>, které součástky je třeba vyměnit.",
+    "a": [
+      "popřel",
+      "odhadl",
+      "přesně uvedl",
+      "přehlédl"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Grafik <strong>modifikoval</strong> původní návrh plakátu tak, aby se na něj vešlo nové logo.",
+    "a": [
+      "upravil",
+      "stáhl z oběhu",
+      "zamítl",
+      "okopíroval"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Muž se pokusil <strong>manipulovat</strong> se svědkem, aby ve výpovědi zamlčel podstatnou okolnost.",
+    "a": [
+      "právně ho zastupovat",
+      "chránit ho před veřejností",
+      "ověřit jeho totožnost",
+      "nepoctivě ho ovlivnit"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Moderátor musel otázku <strong>parafrázovat</strong>, protože jí host napoprvé nerozuměl.",
+    "a": [
+      "přeložit do jiného jazyka",
+      "vyjádřit jinými slovy",
+      "přečíst doslova",
+      "vzít zpět"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Porucha se objevuje <strong>sporadicky</strong>, zhruba jednou za několik měsíců a bez pravidelného rytmu.",
+    "a": [
+      "nepřetržitě",
+      "stále častěji",
+      "jen občas",
+      "v přesných intervalech"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Po několika dnech bez vody se stav rostlin <strong>rapidně</strong> zhoršil.",
+    "a": [
+      "velmi rychle",
+      "zdánlivě",
+      "nepatrně",
+      "opakovaně"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Biologové sledují <strong>migraci</strong> ptáků mezi hnízdišti a zimovišti.",
+    "a": [
+      "rozmnožování",
+      "krmení",
+      "přepeřování",
+      "tah"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Silný déšť <strong>komplikoval</strong> příjezd autobusů do areálu.",
+    "a": [
+      "urychloval",
+      "oznamoval",
+      "ztěžoval",
+      "umožňoval"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Nové zařízení má <strong>regulovat</strong> množství světla v místnosti podle toho, jak silně svítí slunce.",
+    "a": [
+      "měřit",
+      "řídit",
+      "zaznamenávat",
+      "zachovávat beze změny"
+    ],
+    "c": 1
+  },
+  {
+    "q": "<strong>Kapacita</strong> sálu je tři sta osob.",
+    "a": [
+      "nejvyšší počet lidí, které sál pojme",
+      "průměrná návštěvnost",
+      "počet prodaných vstupenek",
+      "počet volných míst"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Dopravce <strong>kompenzoval</strong> cestujícím zpoždění tím, že jim vrátil část jízdného.",
+    "a": [
+      "oznámil jim je",
+      "vysvětlil jeho příčinu",
+      "poskytl jim za ně náhradu",
+      "připsal jim za ně vinu"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Technik <strong>integroval</strong> platební bránu do stávajícího e-shopu.",
+    "a": [
+      "otestoval ji mimo e-shop",
+      "odstranil ji z e-shopu",
+      "pronajal ji e-shopu",
+      "začlenil ji do e-shopu"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Obsluha <strong>deaktivovala</strong> alarm, než pustila údržbáře dovnitř.",
+    "a": [
+      "otestovala",
+      "vyřadila z činnosti",
+      "opravila",
+      "znovu nastavila"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Ředitel <strong>delegoval</strong> organizaci školní slavnosti na svou zástupkyni.",
+    "a": [
+      "svěřil jí ji",
+      "odebral jí ji",
+      "zrušil ji na její žádost",
+      "odložil ji kvůli ní"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Martinovu žádost podpořilo <strong>majoritní</strong> stanovisko rady, pro které hlasovalo osm z deseti členů.",
+    "a": [
+      "závazné",
+      "předběžné",
+      "jednomyslné",
+      "většinové"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Lékař <strong>indikoval</strong> další vyšetření, protože první výsledky příčinu bolesti neobjasnily.",
+    "a": [
+      "provedl",
+      "vyhodnotil",
+      "určil jako potřebné",
+      "odvolal"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Za opakované porušení pravidel hrozí klubu <strong>sankce</strong>.",
+    "a": [
+      "odklad",
+      "postih",
+      "omezená výjimka",
+      "napomenutí svědka"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Rodiče požádali o <strong>revizi</strong> posudku, protože podle nich obsahoval chybný závěr.",
+    "a": [
+      "pořízení kopie",
+      "přezkoumání",
+      "zveřejnění",
+      "vydání potvrzení o převzetí"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Před zveřejněním zprávy musela redakce <strong>korigovat</strong> chybný údaj o počtu účastníků.",
+    "a": [
+      "opravit",
+      "doplnit zdrojem",
+      "zvýraznit",
+      "přeložit"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Město chce <strong>realizovat</strong> stavbu cyklostezky do konce příštího roku.",
+    "a": [
+      "navrhnout",
+      "projednat",
+      "zdokumentovat",
+      "uskutečnit"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Firma <strong>distribuuje</strong> učebnice do knihkupectví po celé republice.",
+    "a": [
+      "tiskne",
+      "překládá",
+      "dodává",
+      "posuzuje"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Účast na kurzu je <strong>fakultativní</strong>, zájemci se mohou přihlásit do pátku.",
+    "a": [
+      "placená",
+      "nepovinná",
+      "výběrová",
+      "neveřejná"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Aby mohly začít stavební práce, město muselo <strong>relokovat</strong> školní družinu do sousední budovy.",
+    "a": [
+      "rozšířit",
+      "vybavit",
+      "zaregistrovat",
+      "přemístit"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Obě oddělení pracují <strong>autonomně</strong> a o rozdělení úkolů si rozhodují sama.",
+    "a": [
+      "samostatně",
+      "střídavě",
+      "příležitostně",
+      "společně"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Starosta si vyhradil právo <strong>vetovat</strong> rozhodnutí komise, i kdyby pro něj hlasovala většina členů.",
+    "a": [
+      "odložit hlasování o něm",
+      "zveřejnit je předem",
+      "zabránit tomu, aby vstoupilo v platnost",
+      "navrhnout jeho znění"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Obě školy <strong>participují</strong> na organizaci soutěže a každá zajišťuje jednu její část.",
+    "a": [
+      "dohlížejí na ni",
+      "podílejí se na ní",
+      "soupeří o ni",
+      "žádají o ni"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Vedení školy <strong>akceptovalo</strong> návrh žáků a souhlasilo s prodloužením přestávky.",
+    "a": [
+      "přepracovalo",
+      "odložilo",
+      "zamítlo",
+      "přijalo"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Zastupitelé vyzvali radního, aby po zveřejnění výsledků kontroly <strong>rezignoval</strong> na svou funkci.",
+    "a": [
+      "požádal o dovolenou",
+      "změnil své stanovisko",
+      "vzdal se funkce",
+      "obhájil svůj postup"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Za špatné viditelnosti nesmí řidič <strong>akcelerovat</strong> před nepřehlednou zatáčkou.",
+    "a": [
+      "řadit neutrál",
+      "zpomalovat",
+      "měnit směr jízdy",
+      "zrychlovat"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Když obě strany odmítly jednat přímo, nabídla jim obec <strong>mediaci</strong>.",
+    "a": [
+      "právní zastoupení jedné strany",
+      "okamžité rozhodnutí sporu",
+      "zprostředkování dohody",
+      "veřejné hlasování"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Redakce odmítla zveřejnit titulek, který <strong>dehonestoval</strong> účastníky soutěže.",
+    "a": [
+      "přehlížel jejich účast",
+      "snižoval jejich důstojnost",
+      "lichotil jim",
+      "zamlčoval jejich jména"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Předseda komise během schůze <strong>imitoval</strong> hlas svého předchůdce.",
+    "a": [
+      "nahrával",
+      "tlumil",
+      "napodoboval",
+      "zesiloval"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Úřad musí <strong>archivovat</strong> zápisy ze zasedání i po skončení volebního období.",
+    "a": [
+      "opravit je",
+      "zveřejnit je",
+      "přeložit je",
+      "dlouhodobě je uchovávat"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Sportovní svaz hráče kvůli porušení pravidel na tři zápasy <strong>suspendoval</strong>.",
+    "a": [
+      "dočasně mu zakázal hrát",
+      "zrušil mu přestup",
+      "snížil mu odměnu",
+      "přeřadil ho do vyšší soutěže"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Učitelka studenty upozornila, že v referátu nesmějí cizí názory <strong>prezentovat</strong> jako vlastní.",
+    "a": [
+      "překládat",
+      "ověřovat",
+      "vyvracet",
+      "předkládat"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Ani jedna delegace nechtěla ustoupit, ale po několika hodinách se podařilo dosáhnout <strong>konsenzu</strong>.",
+    "a": [
+      "veřejného projednání",
+      "změny vyjednavačů",
+      "obecné shody",
+      "odkladu"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Po zveřejnění zprávy mluvčí její obsah jednoznačně <strong>dementoval</strong>.",
+    "a": [
+      "popřel",
+      "doplnil",
+      "omluvil",
+      "shrnul"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Dopravce <strong>avizuje</strong> přerušení provozu už týden před plánovanou opravou.",
+    "a": [
+      "prodlužuje",
+      "vyšetřuje",
+      "napravuje",
+      "předem ohlašuje"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Vystoupení zástupkyně školy pomohlo <strong>mobilizovat</strong> rodiče k podpoře sbírky.",
+    "a": [
+      "rozdělit je do skupin",
+      "přimět je k aktivnímu zapojení",
+      "odradit je",
+      "zbavit je odpovědnosti"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Zástupci obou zemí svá prohlášení <strong>synchronizují</strong>, aby vyšla přesně ve stejnou chvíli.",
+    "a": [
+      "sjednotí jejich znění",
+      "časově je sladí",
+      "zkrátí je na stejnou délku",
+      "přeloží je do stejného jazyka"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Výbor návrh nejprve <strong>analyzoval</strong>, aby odhalil jeho slabá místa.",
+    "a": [
+      "podrobně rozebral",
+      "stručně zopakoval",
+      "podepsal",
+      "odmítl"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Banka varovala před stránkou, která se snažila <strong>falšovat</strong> její přihlašovací formulář.",
+    "a": [
+      "přeložit ho",
+      "prověřit jeho zabezpečení",
+      "zjednodušit jeho vyplnění",
+      "vytvořit jeho podvrh"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Badatelé chtějí <strong>konfrontovat</strong> údaje z kroniky se záznamy v městském archivu.",
+    "a": [
+      "roztřídit je podle stáří",
+      "postavit je vedle sebe a porovnat",
+      "spojit je do jediného záznamu",
+      "opatřit je stejnou doložkou"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Po stížnostech rodičů začala rada školy <strong>monitorovat</strong> vývoj absence v jednotlivých třídách.",
+    "a": [
+      "průběžně sledovat",
+      "snižovat",
+      "zpětně omlouvat",
+      "předem odhadovat"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Obec musela v rámci nápravy majetkových křivd <strong>restituovat</strong> pozemky původním vlastníkům.",
+    "a": [
+      "pronajmout je",
+      "ocenit je",
+      "rozdělit je",
+      "vrátit je"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Ministerstvo <strong>alokovalo</strong> peníze na obnovu poničených mostů.",
+    "a": [
+      "vybralo na pokutách",
+      "stáhlo z oběhu",
+      "vyčlenilo",
+      "vypůjčilo si"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Po sérii neúspěchů začal tlak na vedení podniku <strong>eskalovat</strong>.",
+    "a": [
+      "ztrácet příčinu",
+      "nabývat na síle",
+      "pomalu ustupovat",
+      "měnit původce"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Soud nařídil <strong>konfiskaci</strong> majetku získaného trestnou činností.",
+    "a": [
+      "dočasné zapůjčení",
+      "zabavení",
+      "navrácení původnímu držiteli",
+      "ocenění"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Archeologové se snaží <strong>datovat</strong> nalezenou nádobu podle výzdoby a vrstvy, v níž ležela.",
+    "a": [
+      "určit jejího výrobce",
+      "určit dobu jejího vzniku",
+      "prostorově ji zaměřit",
+      "očistit ji od zeminy"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Škola může <strong>diferencovat</strong> zadání podle úrovně znalostí žáků.",
+    "a": [
+      "přepočítávat je na body",
+      "zveřejňovat je předem",
+      "rozlišovat je podle jejich potřeb",
+      "zdůvodňovat jejich výběr"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Vědci se snažili <strong>extrapolovat</strong> naměřený trend na období po skončení výzkumu.",
+    "a": [
+      "odhadnout jeho pokračování za hranicí naměřených údajů",
+      "vyjádřit ho v jiné jednotce",
+      "doložit ho staršími záznamy",
+      "skrýt jeho výkyvy pomocí průměru"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Před návratem do práce se snaží <strong>rekonvalescent</strong> nabrat síly po těžké nemoci.",
+    "a": [
+      "člověk čekající na první vyšetření",
+      "člověk zotavující se po nemoci",
+      "ošetřující pracovník",
+      "doprovod nemocného"
+    ],
+    "c": 1
+  },
+  {
+    "q": "<strong>Konsekvence</strong> jeho rozhodnutí pocítil celý tým.",
+    "a": [
+      "okolnosti před rozhodnutím",
+      "původní příčiny",
+      "důsledky",
+      "tajné záměry"
+    ],
+    "c": 2
+  },
+  {
+    "q": "V požadavcích na kandidáta se objevila <strong>flexibilita</strong> v otázce pracovní doby.",
+    "a": [
+      "bezchybná dochvilnost",
+      "pevný rozvrh",
+      "schopnost přizpůsobit se změnám",
+      "ochota pracovat bez odměny"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Překladatel musel <strong>dešifrovat</strong> zprávu zapsanou tajnými znaky.",
+    "a": [
+      "potvrdit její pravost",
+      "doplnit vynechaná slova",
+      "stručně ji shrnout",
+      "rozluštit ji"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Porota nakonec <strong>diskvalifikovala</strong> běžce, který si prokazatelně zkrátil trasu.",
+    "a": [
+      "odměnila za umístění",
+      "napomenula bez dalších následků",
+      "vyloučila ze soutěže",
+      "přesunula do jiné skupiny"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Návrh počítá s <strong>rekultivací</strong> bývalého lomu, kde mají vzniknout louky a mokřady.",
+    "a": [
+      "přesným zaměřením hranic",
+      "obnovou krajiny narušené těžbou",
+      "rozšířením těžby",
+      "prodejem vytěžené horniny"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Policie použila fotografii jako <strong>indicii</strong> při pátrání po pachateli.",
+    "a": [
+      "záruku beztrestnosti",
+      "konečný rozsudek",
+      "vodítko",
+      "veřejnou obžalobu"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Učitel žákům ukázal, jak lze složitý obrazec <strong>dekomponovat</strong> na několik jednoduchých tvarů.",
+    "a": [
+      "rozložit na části",
+      "přenést na síť",
+      "zvětšit v daném poměru",
+      "spojit s jiným obrazcem"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Autor v doslovu vysvětluje <strong>genezi</strong> románu a popisuje, jak ho postupně přepracovával.",
+    "a": [
+      "hlavní zápletku",
+      "vznik a vývoj",
+      "pořadí kapitol",
+      "ohlas po vydání"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Učitel v rozboru upozornil na <strong>ambiguitu</strong> nadpisu, který lze chápat dvěma způsoby.",
+    "a": [
+      "dvojznačnost",
+      "stručnost",
+      "závislost na rýmu",
+      "spisovnost"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Při stěhování vybavení se ukázalo, jak důležitá je dobrá <strong>logistika</strong> celé akce.",
+    "a": [
+      "výzdoba nových prostor",
+      "propagace mezi veřejností",
+      "účetní kontrola výdajů",
+      "organizace přepravy a uložení věcí"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Počet přihlášených během roku <strong>fluktuoval</strong> mezi dvaceti a čtyřiceti.",
+    "a": [
+      "klesl na nulu",
+      "zůstal stejný",
+      "rostl stálým tempem",
+      "kolísal"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Před vydáním musí redakce <strong>autorizovat</strong> rozhovor s jeho hostem.",
+    "a": [
+      "nechat hosta schválit znění rozhovoru",
+      "zkrátit rozhovor na polovinu",
+      "doplnit k rozhovoru fotografii",
+      "přeložit rozhovor do jiného jazyka"
+    ],
+    "c": 0
+  },
+  {
+    "q": "V debatě byla patrná <strong>polarizace</strong> společnosti do dvou stále vzdálenějších táborů.",
+    "a": [
+      "vyostřování protikladných postojů",
+      "střídání politických představitelů",
+      "postupné sbližování postojů",
+      "pokles zájmu o veřejné dění"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Kvůli <strong>absenci</strong> povolení nemohla stavba začít.",
+    "a": [
+      "chybějícímu povolení",
+      "dvouleté platnosti povolení",
+      "změně adresy stavebního úřadu",
+      "opožděnému zveřejnění povolení"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Firma chce <strong>diverzifikovat</strong> své příjmy, aby už nebyla závislá na jediném odběrateli.",
+    "a": [
+      "zdanit je jinou sazbou",
+      "rozložit je mezi více zdrojů",
+      "převést je na jiný účet",
+      "stanovit jejich horní hranici"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Kritik četl článek jako <strong>polemiku</strong> s názorem, že škola má hodnotit jen výkon žáků.",
+    "a": [
+      "vysvětlení původu tohoto názoru",
+      "stručné shrnutí tohoto názoru",
+      "bezvýhradné přijetí tohoto názoru",
+      "argumentační střet s tímto názorem"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Software musí během zpracování <strong>detekovat</strong> vadné řádky v seznamu údajů.",
+    "a": [
+      "rozpoznat",
+      "přepsat",
+      "vytisknout",
+      "přidat"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Po převzetí menších podniků získala firma na místním trhu <strong>dominantní</strong> postavení.",
+    "a": [
+      "převládající",
+      "rovnocenné s ostatními",
+      "snadno nahraditelné",
+      "formálně zakázané"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Pro školní kroniku fotograf <strong>dokumentoval</strong> průběh obnovy tělocvičny.",
+    "a": [
+      "hodnotil ho z hlediska bezpečnosti",
+      "průběžně ho měnil",
+      "zachycoval ho jako doklad",
+      "řídil ho"
+    ],
+    "c": 2
+  },
+  {
+    "q": "Kvůli nejasné formulaci muselo vedení <strong>reformulovat</strong> zadání soutěže.",
+    "a": [
+      "přeložit je do cizího jazyka",
+      "ponechat jen jeho titulek",
+      "stáhnout je z webu",
+      "vyjádřit je novým zněním"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Školní poradkyně upozornila, že kvůli jediné chybě bychom neměli žáka <strong>stigmatizovat</strong>.",
+    "a": [
+      "omlouvat ho z výuky",
+      "dávat mu znevažující nálepku",
+      "zkoušet ho před tabulí",
+      "chválit ho před ostatními"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Vedení dalo studentům <strong>mandát</strong> jednat jménem celé školy.",
+    "a": [
+      "odměnu za jednání",
+      "potvrzení o účasti",
+      "seznam témat k přečtení",
+      "oprávnění k zastupování"
+    ],
+    "c": 3
+  },
+  {
+    "q": "Firma musela po změně trhu <strong>restrukturalizovat</strong> provoz a přeskupit oddělení.",
+    "a": [
+      "změnit jeho vnitřní uspořádání",
+      "otevřít další pobočku",
+      "zastavit veškerou činnost",
+      "obnovit původní stav"
+    ],
+    "c": 0
+  },
+  {
+    "q": "Rada rozhodla, že výši příspěvků bude <strong>valorizovat</strong> podle růstu cen.",
+    "a": [
+      "sjednocovat pro všechny",
+      "průběžně zvyšovat s ohledem na růst cen",
+      "snižovat s rostoucím počtem žadatelů",
+      "vyplácet ve splátkách"
+    ],
+    "c": 1
+  },
+  {
+    "q": "Autorka studie zpochybnila <strong>premisu</strong>, z níž její kolega odvodil svůj závěr.",
+    "a": [
+      "způsob zveřejnění studie",
+      "výjimku z pravidla",
+      "výchozí předpoklad",
+      "formulaci konečného výsledku"
+    ],
+    "c": 2
+  }
+];
+const TIME_LIMIT = 10;
+let player = JSON.parse(localStorage.getItem('lovciSynonym_player') || 'null');
+let stats = JSON.parse(localStorage.getItem('lovciSynonym_stats') || '{"answered":0,"correct":0,"bestStreak":0,"games":0}');
+const SHEET_ID="1pkj1ISkzdtgNphGLGwakezT1WzHJxz-pv2OLnCmfnLk";
+const GAS_WEB_APP_URL="https://script.google.com/macros/s/AKfycbzrwi1N_f2ddRf2XsOLBtDEFmcxAdWPpW170_dtGNSXUl8vejZl1dhxkqMYhjdxVs8u/exec";
+const RESULTS_SHEET_URL="https://docs.google.com/spreadsheets/d/1pkj1ISkzdtgNphGLGwakezT1WzHJxz-pv2OLnCmfnLk/edit?usp=sharing";
+const ROUND_SIZE = 20;
+const labels = {train:'TRÉNINK',challenge:'VÝZVA',test:'TEST'};
+let mode = 'train', screen = 'menu', run = null, timer = null, pending = null;
+
+function $(id){return document.getElementById(id)}
+function show(id){screen=id;document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active')}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]} return a}
+function playTone(type){
+ try {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AudioContext();
+  const now = ctx.currentTime;
+  const master = ctx.createGain();
+  master.connect(ctx.destination);
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.exponentialRampToValueAtTime(type==='win'?0.22:0.16, now + 0.015);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + (type==='win'?0.85:0.28));
+  const makeOsc = (freq, start, dur, wave='sine') => {
+   const osc = ctx.createOscillator();
+   const gain = ctx.createGain();
+   osc.type = wave; osc.frequency.setValueAtTime(freq, now + start);
+   gain.gain.setValueAtTime(0.0001, now + start);
+   gain.gain.exponentialRampToValueAtTime(1, now + start + 0.015);
+   gain.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+   osc.connect(gain); gain.connect(master);
+   osc.start(now + start); osc.stop(now + start + dur + 0.03);
+  };
+  if(type==='ok'){ makeOsc(660,0,0.12); makeOsc(880,0.09,0.16); }
+  else if(type==='bad'){ makeOsc(190,0,0.22,'sawtooth'); makeOsc(145,0.08,0.22,'sawtooth'); }
+  else if(type==='tick'){ makeOsc(440,0,0.06,'square'); }
+  else if(type==='win'){ [523,659,784,1046].forEach((f,i)=>makeOsc(f,i*0.12,0.22)); }
+ } catch(e) {}
+}
+
+function init(){
+ document.querySelectorAll('.resultsLink').forEach(link => link.href = RESULTS_SHEET_URL);
+ show('menu');
+}
+
+function pickMode(selected){
+ mode = selected;
+ if(mode === 'train'){
+  startGame();
+  return;
+ }
+ $('loginTitle').textContent = labels[mode];
+ $('name').value = player?.surname || '';
+ $('cls').value = player?.cls || '';
+ show('login');
+ $('name').focus();
+}
+
+function savePlayer(){
+ const surname = $('name').value.trim();
+ const cls = $('cls').value.trim().toUpperCase();
+ if(!surname || !cls){ alert('Vyplň příjmení i třídu.'); return; }
+ player = {surname, cls};
+ localStorage.setItem('lovciSynonym_player', JSON.stringify(player));
+ startGame();
+}
+
+function clearTimers(){
+ clearInterval(timer);
+ clearTimeout(pending);
+}
+
+function goMenu(){
+ if(activeProtected()){ finish(6, 'odchod do hlavního menu'); return; }
+ clearTimers();
+ show('menu');
+}
+
+function startGame(){
+ clearTimers();
+ run = {player, score:0, wrong:0, pos:0, order:[], locked:true, restart:false};
+ if(mode !== 'train'){ stats.games++; saveStats(); }
+ $('modePill').textContent = labels[mode];
+ $('timerPill').classList.toggle('hidden', mode === 'train');
+ show('game');
+ advance();
+}
+
+function advance(){
+ if(screen !== 'game' || !run.locked) return;
+ clearTimers();
+ if(run.restart){
+  run.score = run.wrong = run.pos = 0;
+  run.restart = false;
+ }
+ if(mode !== 'train' && run.pos === ROUND_SIZE){ finish(); return; }
+ if(run.pos === 0 || run.pos === run.order.length){
+  run.order = shuffle([...QUESTIONS]);
+  run.pos = 0;
+ }
+ const question = run.order[run.pos++];
+ run.current = question;
+ run.locked = false;
+ $('nextBtn').classList.add('hidden');
+ $('feedback').textContent = '';
+ $('progress').textContent = mode === 'train'
+  ? 'Správně za sebou: ' + run.score
+  : `${run.pos}/${ROUND_SIZE} • ${mode === 'test' ? 'Body' : 'Série'}: ${run.score}`;
+ $('sentence').innerHTML = question.q;
+ $('options').replaceChildren();
+ question.a.forEach((txt,i)=>{
+  const button = document.createElement('button');
+  button.className = 'opt';
+  button.textContent = String.fromCharCode(65+i) + ' ' + txt;
+  button.onclick = () => answer(i);
+  $('options').appendChild(button);
+ });
+ if(mode !== 'train') startTimer();
+}
+
+function startTimer(){
+ run.deadline = Date.now() + TIME_LIMIT * 1000;
+ $('time').textContent = TIME_LIMIT;
+ let last = TIME_LIMIT;
+ timer = setInterval(()=>{
+  const left = Math.max(0, Math.ceil((run.deadline - Date.now()) / 1000));
+  $('time').textContent = left;
+  if(left === 0) answer(-1);
+  else if(left <= 3 && left !== last) playTone('tick');
+  last = left;
+ },100);
+}
+
+function answer(chosen){
+ if(screen !== 'game' || run.locked) return;
+ if(mode !== 'train' && Date.now() >= run.deadline) chosen = -1;
+ run.locked = true;
+ clearTimers();
+ const {c,a} = run.current;
+ const good = chosen === c;
+ if(good){
+  run.score++;
+  stats.correct++;
+  playTone(run.score === ROUND_SIZE && mode === 'challenge' ? 'win' : 'ok');
+ } else {
+  run.wrong++;
+  run.restart = mode === 'challenge';
+  if(mode === 'train') run.score = 0;
+  playTone('bad');
+ }
+ stats.answered++;
+ if(mode !== 'test') stats.bestStreak = Math.max(stats.bestStreak, run.score);
+ saveStats();
+ [...$('options').children].forEach((button,i)=>{
+  button.disabled = true;
+  if(i === c) button.classList.add('correct');
+  else if(i === chosen) button.classList.add('wrong');
+ });
+ $('feedback').textContent = good ? 'SPRÁVNĚ' : chosen === -1 ? 'ČAS VYPRŠEL' : 'CHYBA';
+ if(!good){
+  const detail = document.createElement('small');
+  detail.textContent = 'Správně: ' + a[c] + (run.restart ? ' • Výzva začíná znovu.' : '');
+  $('feedback').appendChild(detail);
+ }
+ $('nextBtn').textContent = run.restart ? 'NOVÁ VÝZVA'
+  : mode !== 'train' && run.pos === ROUND_SIZE ? 'VÝSLEDEK' : 'DALŠÍ';
+ $('nextBtn').classList.remove('hidden');
+ if(mode !== 'train') pending = setTimeout(advance, good ? 1200 : 6000);
+}
+
+function grade(score){
+ return score >= 18 ? 1 : score >= 16 ? 2 : score >= 14 ? 3 : score >= 12 ? 4 : 5;
+}
+
+function activeProtected(){ return screen === 'game' && mode !== 'train'; }
+
+function finish(forcedGrade, reason){
+ if(!activeProtected()) return;
+ clearTimers();
+ const attempt = run;
+ const mark = forcedGrade ?? (mode === 'challenge' ? 1 : grade(attempt.score));
+ const note = reason ? 'PODVOD: ' + reason : labels[mode];
+ show('result');
+ $('resultTitle').textContent = reason ? 'POKUS UKONČEN' : mode === 'challenge' ? 'VÝZVA SPLNĚNA' : 'VÝSLEDEK';
+ $('resultPlayer').textContent = attempt.player.surname + ' · ' + attempt.player.cls;
+ $('resultDetails').textContent = (reason ? 'Důvod: ' + reason + ' · ' : '') + `Body: ${attempt.score}/${ROUND_SIZE} · Známka: ${mark}`;
+ if(reason) playTone('bad');
+ const body = new URLSearchParams({
+  timestamp:new Date().toISOString(), jmeno:attempt.player.surname, trida:attempt.player.cls,
+  znamka:mark, rezim:mode, oddil:'synonyma', body:attempt.score, celkem:ROUND_SIZE,
+  spravne:attempt.score, spatne:attempt.wrong, poznamka:note, sheetId:SHEET_ID, app:'Lovci synonym'
+ });
+ const status = $('sendStatus');
+ status.textContent = 'Odesílám výsledek…';
+ const report = message => {
+  if(run === attempt && screen === 'result') status.textContent = message;
+ };
+ const sent = 'Požadavek na zápis byl odeslán. Zápis ověř ve výsledkové tabulce.';
+ if(reason && typeof navigator.sendBeacon === 'function'){
+  try {
+   if(navigator.sendBeacon(GAS_WEB_APP_URL,body)){ report(sent); return; }
+  } catch {}
+ }
+ fetch(GAS_WEB_APP_URL,{method:'POST',mode:'no-cors',body,keepalive:true})
+  .then(() => report(sent))
+  .catch(() => report('Výsledek se nepodařilo odeslat.'));
+}
+
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden && activeProtected()) finish(6,'přepnutí mimo stránku');
+});
+window.addEventListener('pagehide',()=>{
+ if(activeProtected()) finish(6,'opuštění stránky');
+});
+window.addEventListener('beforeunload',event=>{
+ if(activeProtected()){ event.preventDefault(); event.returnValue = ''; }
+});
+window.addEventListener('blur',()=>{
+ if(!activeProtected()) return;
+ const attempt = run;
+ setTimeout(()=>{
+  if(run === attempt && activeProtected() && !document.hasFocus()) finish(6,'ztráta aktivního okna');
+ },650);
+});
+
+function saveStats(){ localStorage.setItem('lovciSynonym_stats', JSON.stringify(stats)); }
+function showStats(){
+ const pct = stats.answered ? Math.round(stats.correct/stats.answered*100) : 0;
+ $('statsBox').innerHTML = `<table class="table">
+ <tr><th>Zahájené testy a výzvy</th><td>${stats.games}</td></tr>
+ <tr><th>Zodpovězeno otázek</th><td>${stats.answered}</td></tr>
+ <tr><th>Správně</th><td>${stats.correct} (${pct} %)</td></tr>
+ <tr><th>Nejlepší série</th><td>${stats.bestStreak}</td></tr>
+ </table>`;
+ show('stats');
+}
+init();
+</script>
+</body>
+</html>
